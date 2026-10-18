@@ -205,7 +205,7 @@ h1{font-family:var(--display);font-weight:400;color:var(--red);font-size:clamp(2
     <label class="namefld" for="myName">Как тебя подписать в вызове?
       <input id="myName" maxlength="24" placeholder="Твоё имя" autocomplete="given-name">
     </label>
-    <p class="hint">В VK-версии имя подставится само из профиля, а вызов уйдёт другу в личные сообщения.</p>
+    <p class="hint">Нажми «Отправить» и выбери друга — во ВКонтакте, MAX или любом мессенджере.</p>
     <div class="row">
       <button class="btn" id="sendChallenge">Отправить другу</button>
       <button class="btn ghost" id="closeChallenge">Назад</button>
@@ -234,7 +234,8 @@ h1{font-family:var(--display);font-weight:400;color:var(--red);font-size:clamp(2
 
 <script>
 /* ---------- ссылки ---------- */
-let APP_URL='https://claude.ai/artifact/5qNqY6MvPgX8aBYRng1mZx'; // в VK-версии: ссылка на мини-приложение vk.com/appXXXX
+const GAME_URL='https://diezelman86.github.io/yarmarka/';
+let APP_URL=GAME_URL; // внутри VK заменяется на vk.com/app<ID>
 const LINKS={
   comic:'https://vk.ru/app5898182_-31319842#s=1598587&force=1',
   asya:'https://vk.ru/asya_nova_sing',
@@ -766,7 +767,7 @@ async function makeStory(){
   try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); await AC.resume(); }catch(e){}
   const mime=pickMime();
   if(!window.MediaRecorder||!sc.captureStream||!AC||!mime){
-    sStatus.textContent='Этот браузер не умеет записывать видео. В VK-версии игры ролик соберётся на сервере.';
+    sStatus.textContent='Этот браузер не умеет записывать видео. Открой игру в Chrome или Safari на телефоне.';
     let t0=performance.now(); const loop=()=>{ if(document.getElementById('story').hidden)return; drawStory(sg,(performance.now()-t0)/1000%STORY_SEC,score,title,badge); requestAnimationFrame(loop); }; loop();
     recBusy=false; return; }
   if(!recAudio){ recAudio=new Audio(SONG); recSrc=AC.createMediaElementSource(recAudio); recDest=AC.createMediaStreamDestination();
@@ -778,7 +779,7 @@ async function makeStory(){
   const t0=performance.now();
   rec.onstop=()=>{ recAudio.pause(); storyBlob=new Blob(chunks,{type:mime.split(';')[0]});
     sv.src=URL.createObjectURL(storyBlob); sc.hidden=true; sv.hidden=false; sSend.hidden=false; sv.play().catch(()=>{});
-    sStatus.textContent='Ролик готов: '+STORY_SEC+' секунд с песней. В VK-версии кнопка ниже откроет редактор историй.'; recBusy=false; };
+    sStatus.textContent='Ролик готов: '+STORY_SEC+' секунд с песней!'; recBusy=false; };
   recAudio.currentTime=0; await recAudio.play().catch(()=>{});
   rec.start(250);
   const loop=()=>{ const t=(performance.now()-t0)/1000; drawStory(sg,Math.min(t,STORY_SEC),score,title,badge);
@@ -819,11 +820,21 @@ document.getElementById('postSend').onclick=async()=>{
      «В MAX»: системное меню «Поделиться» телефона (картинка + текст), где выбирается MAX */
   const text=document.getElementById('postText').value, st=document.getElementById('postStatus');
   unlockGift();
+  if(postKind==='wall'){
+    const m=HERO[hero].mode, img=GAME_URL+'r/'+(m==='girls'?'devitsy_':'zlatobryuh_')+(rankLevel(S.score)+1)+'.jpg';
+    const title=`Мой результат в «Весёлой Ярмарке» — ${S.score} очков! Сможешь больше?`;
+    window.open('https://vk.com/share.php?url='+encodeURIComponent(GAME_URL)+'&title='+encodeURIComponent(title)+'&image='+encodeURIComponent(img)+'&noparse=true','_blank','noopener');
+    try{ await navigator.clipboard.writeText(text); }catch(e){}
+    st.textContent='Открылось окно ВКонтакте — нажми «Опубликовать». Текст поста скопирован, можно вставить его в комментарий к записи. Подарок уже открыт!';
+    return;
+  }
   try{ if(postBlob){ const f=new File([postBlob],'yarmarka-result.jpg',{type:'image/jpeg'});
       if(navigator.canShare&&navigator.canShare({files:[f],text})){ await navigator.share({files:[f],text}); st.textContent='Готово! Подарок открыт — комикс ждёт тебя на экране результата.'; return; } } }catch(e){}
   try{ await navigator.clipboard.writeText(text); }catch(e){ const ta=document.getElementById('postText'); ta.focus(); ta.select(); }
-  st.textContent=(postKind==='wall'?'Здесь публикация недоступна — в VK-версии откроется окно поста на стене.':'Здесь отправка недоступна — в VK-версии откроется меню «Поделиться» с MAX.')+' Текст скопирован, картинку можно сохранить долгим нажатием. Подарок уже открыт!';
+  st.textContent='Текст скопирован, картинка сохранена — вставь их в MAX. Подарок уже открыт!';
+  if(postBlob) dl(postBlob,'vesyolaya-yarmarka.jpg');
 };
+function dl(blob,name){ try{ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);}catch(e){} }
 function unlockGift(){ document.getElementById('gift').hidden=true; document.getElementById('lnkComic').hidden=false; store.set('dk_gift','1'); }
 if(store.get('dk_gift')==='1'){ document.getElementById('gift').hidden=true; document.getElementById('lnkComic').hidden=false; }
 sSend.onclick=async()=>{
@@ -836,7 +847,8 @@ sSend.onclick=async()=>{
   const ext=storyBlob&&storyBlob.type.includes('mp4')?'mp4':'webm';
   try{ const f=new File([storyBlob],'devitsa-krasavitsa.'+ext,{type:storyBlob.type});
     if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:'Весёлая Ярмарка'}); return; } }catch(e){}
-  sStatus.textContent='Здесь отправка недоступна: в VK-версии ролик откроется в редакторе историй. Подарок уже открыт — закрой окно и читай комикс!';
+  dl(storyBlob,'vesyolaya-yarmarka.'+ext);
+  sStatus.textContent='Видео сохранено! Открой ВКонтакте → История → выбери это видео из галереи. Подарок уже открыт — закрой окно и читай комикс!';
 };
 document.getElementById('storyClose').onclick=()=>{ document.getElementById('story').hidden=true; try{recAudio&&recAudio.pause();sv.pause();}catch(e){} };
 
@@ -867,6 +879,7 @@ document.getElementById('sendChallenge').onclick=async()=>{
   /* VK Mini App: vkBridge.send('VKWebAppShare', {link}) — откроет окно «Отправить другу» с выбором собеседника */
   const ta=document.getElementById('challengeText'), st=document.getElementById('challengeStatus');
   ta.value=text; ta.hidden=false;
+  try{ if(navigator.share){ await navigator.share({title:'Весёлая Ярмарка',text}); st.textContent='Вызов отправлен!'; return; } }catch(e){ if(e&&e.name==='AbortError') return; }
   try{ await navigator.clipboard.writeText(text); st.textContent='Текст вызова скопирован — вставь его другу в личные сообщения.'; }
   catch(e){ ta.focus(); ta.select(); st.textContent='Выдели текст выше и отправь его другу в личные сообщения.'; }
 };
@@ -932,6 +945,7 @@ if(IN_VK){
     let ok=false; for(const g of VK_GROUPS){ try{ await VKB.send('VKWebAppAllowMessagesFromGroup',{group_id:g}); ok=true; }catch(e){} }
     if(ok){ setNotify(true); store.set('dk_notify','1'); } };
 }
+if(!IN_VK) nb.hidden=true;
 document.getElementById('play').onclick=start;
 document.getElementById('restart').onclick=()=>{beep(440,.08);start();};
 document.getElementById('again').onclick=start;
