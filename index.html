@@ -697,6 +697,7 @@ function makeRankCard(mode,lvl){
   g.font='500 30px '+F;g.fillText('«Девица-красавица» · АСЯ NOVA и Женя Русева · 30 октября',540,1318);
   return c.toDataURL('image/jpeg',.92);
 }
+function sharePage(){ return GAME_URL+'r/'+(HERO[hero].mode==='girls'?'devitsy_':'zlatobryuh_')+(rankLevel(S.score)+1)+'.html'; }
 function rankLevel(sc){const r=md().ranks;let l=0;r.forEach(([m],i)=>{if(sc>=m)l=i;});return l;}
 function endGame(){
   S.running=false; document.getElementById('restart').hidden=true;
@@ -746,10 +747,21 @@ function drawStory(g,t,score,title,badge){
   const im=IMG[hc.spr], h=z?440:480, w=h*im.width/im.height, bob=Math.sin(t*3.2)*8;
   g.fillStyle='rgba(60,20,10,.15)';g.beginPath();g.ellipse(Wd/2,920,130,15,0,0,7);g.fill();
   if(im.complete)g.drawImage(im,Wd/2-w/2,(z?470:445)+bob,w,h);
+  if(score===null){ // ролик-звание для историй VK (без очков)
+    const a=Math.min(1,t/1.2); g.globalAlpha=a; const tt='«'+title.replace(/[«»]/g,'')+'»';
+    g.font='800 30px Rubik, Inter, sans-serif';g.fillStyle=C.gold;g.fillText('МОЁ ЗВАНИЕ НА ЯРМАРКЕ',Wd/2,1010);
+    let fs=tt.length>22?44:tt.length>16?54:64; g.font=`700 ${fs}px "Ruslan Display", Lora, Georgia, serif`;
+    while(g.measureText(tt).width>Wd-60&&fs>30){fs-=2;g.font=`700 ${fs}px "Ruslan Display", Lora, Georgia, serif`;}
+    g.fillStyle=C.red;g.lineWidth=8;g.strokeStyle=C.cream;g.strokeText(tt,Wd/2,1090);g.fillText(tt,Wd/2,1090);
+    const lv=badge|0; g.font='900 40px Rubik, Inter, sans-serif';
+    for(let i=0;i<6;i++){g.fillStyle=i<=lv?'#E8B83A':'rgba(201,154,58,.25)';g.fillText('★',Wd/2+(i-2.5)*50,1150);}
+    g.globalAlpha=1; badge=null;
+  } else {
   const k=Math.min(1,t/2.2), shown=Math.round(score*(1-Math.pow(1-k,3)));
   g.font='900 130px Rubik, sans-serif';g.fillStyle=C.red;g.lineWidth=10;g.strokeStyle=C.cream;g.strokeText(shown,Wd/2,1040);g.fillText(shown,Wd/2,1040);
   g.font='700 30px Rubik, sans-serif';g.fillStyle='#7a5a3a';g.fillText('очков · герой: '+hc.name,Wd/2,1082);
-  if(t>2.4){const a=Math.min(1,(t-2.4)*2);g.globalAlpha=a;const tt=title.startsWith('«')?title:'«'+title+'»';
+  }
+  if(score!==null&&t>2.4){const a=Math.min(1,(t-2.4)*2);g.globalAlpha=a;const tt=title.startsWith('«')?title:'«'+title+'»';
     g.font=`400 ${tt.length>24?34:44}px "Ruslan Display", Georgia, serif`;g.fillStyle=C.red;g.fillText(tt,Wd/2,1140);g.globalAlpha=1;}
   g.fillStyle=C.red;g.fillRect(0,1185,Wd,95);
   g.font='900 32px Rubik, sans-serif';g.fillStyle='#fff';g.fillText('А ты сможешь больше?',Wd/2,1228);
@@ -823,7 +835,7 @@ document.getElementById('postSend').onclick=async()=>{
   if(postKind==='wall'){
     const m=HERO[hero].mode, img=GAME_URL+'r/'+(m==='girls'?'devitsy_':'zlatobryuh_')+(rankLevel(S.score)+1)+'.jpg';
     const title=`Мой результат в «Весёлой Ярмарке» — ${S.score} очков! Сможешь больше?`;
-    window.open('https://vk.com/share.php?url='+encodeURIComponent(GAME_URL)+'&title='+encodeURIComponent(title)+'&image='+encodeURIComponent(img)+'&noparse=true','_blank','noopener');
+    window.open('https://vk.com/share.php?url='+encodeURIComponent(sharePage()),'_blank','noopener');
     try{ await navigator.clipboard.writeText(text); }catch(e){}
     st.textContent='Открылось окно ВКонтакте — нажми «Опубликовать». Текст поста скопирован, можно вставить его в комментарий к записи. Подарок уже открыт!';
     return;
@@ -915,16 +927,20 @@ if(IN_VK){
   // История: картинка 9:16 с результатом + кнопка-ссылка на игру
   document.getElementById('optStory').onclick=async()=>{
     sheet.hidden=true;
-    const c=document.createElement('canvas'); c.width=720; c.height=1280; drawStory(c.getContext('2d'),6,S.score,rankFor(S.score),S.badge);
-    try{ await VKB.send('VKWebAppShowStoryBox',{background_type:'image',blob:c.toDataURL('image/png'),locked:true,
-          attachment:{text:'go_to',type:'url',url:APP_URL}}); unlockGift(); }catch(e){}
+    const vid=GAME_URL+'v/'+hero+'_'+(rankLevel(S.score)+1)+'.mp4';
+    try{ await VKB.send('VKWebAppShowStoryBox',{background_type:'video',url:vid,
+          attachment:{text:'go_to',type:'url',url:APP_URL}}); unlockGift(); }
+    catch(e){ // запасной вариант — картинка
+      const c=document.createElement('canvas'); c.width=720; c.height=1280; drawStory(c.getContext('2d'),6,S.score,rankFor(S.score),S.badge);
+      try{ await VKB.send('VKWebAppShowStoryBox',{background_type:'image',blob:c.toDataURL('image/jpeg',.9),
+          attachment:{text:'go_to',type:'url',url:APP_URL}}); unlockGift(); }catch(e2){} }
   };
   // Стена и MAX
   document.getElementById('postSend').onclick=async()=>{
     const text=document.getElementById('postText').value, st=document.getElementById('postStatus');
     if(postKind==='wall'){
       const ph=RANK_PHOTOS[HERO[hero].mode][rankLevel(S.score)];
-      try{ await VKB.send('VKWebAppShowWallPostBox',{message:text,attachments:[ph,APP_URL].filter(Boolean).join(',')}); unlockGift(); st.textContent='Опубликовано! Подарок открыт — комикс ждёт на экране результата.'; }
+      try{ await VKB.send('VKWebAppShowWallPostBox',{message:text,attachments:ph||sharePage()}); unlockGift(); st.textContent='Опубликовано! Подарок открыт — комикс ждёт на экране результата.'; }
       catch(e){ st.textContent='Публикация отменена.'; }
       return;
     }
@@ -937,7 +953,7 @@ if(IN_VK){
   // Вызов другу — окно «Поделиться» VK
   document.getElementById('sendChallenge').onclick=async()=>{
     const name=myName.value.trim()||'Твой друг', st=document.getElementById('challengeStatus');
-    const link=APP_URL+'#ch-'+b64u(JSON.stringify({n:name,s:S.score,h:hero}));
+    const link=sharePage()+'#ch-'+b64u(JSON.stringify({n:name,s:S.score,h:hero}));
     try{ await VKB.send('VKWebAppShare',{link}); st.textContent='Вызов отправлен!'; }catch(e){ st.textContent='Отправка отменена.'; }
   };
   // Разрешение на сообщения от пабликов
