@@ -103,6 +103,9 @@ h1{font-family:var(--display);font-weight:400;color:var(--red);font-size:clamp(2
 .acts{display:flex;flex-direction:column;gap:10px;width:min(100%,340px)}
 .cta{margin:0;font:700 16px/1.3 var(--body);color:var(--ink);max-width:none}
 .btn.big{width:100%;font-size:20px;padding:16px 12px;line-height:1.15}
+.btn.big.giftbtn{font-size:20px;letter-spacing:.03em;white-space:nowrap;padding:18px 12px;background:linear-gradient(180deg,#F2C94C,#D9A21E);color:#7a1208;box-shadow:0 5px 0 #8a6420;animation:giftpulse 1.4s ease-in-out infinite}
+@keyframes giftpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@media (prefers-reduced-motion:reduce){.btn.big.giftbtn{animation:none}}
 .btn.big.duel{font-size:18px;padding:13px 12px;background:var(--gold);box-shadow:0 5px 0 #8a6420}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn.mid{font-size:16px;padding:12px 8px}
@@ -159,7 +162,8 @@ h1{font-family:var(--display);font-weight:400;color:var(--red);font-size:clamp(2
       <p class="duelres" id="duelRes" hidden></p>
     </div>
     <div class="acts">
-      <p class="cta">Поделись результатом — получи <b>комикс в подарок</b> 🎁</p>
+      <p class="cta" id="ctaTxt">Поделись результатом — получи <b>комикс в подарок</b> 🎁</p>
+      <button class="btn big giftbtn" id="giftBtn" hidden>🎁 ПОЛУЧИТЬ ПОДАРОК</button>
       <button class="btn big story share" id="shareBtn">ПОДЕЛИТЬСЯ</button>
       <button class="btn big duel" id="challengeBtn">Бросить вызов другу ⚔</button>
       <div class="row2">
@@ -168,9 +172,9 @@ h1{font-family:var(--display);font-weight:400;color:var(--red);font-size:clamp(2
       </div>
     </div>
     <div class="more">
-      <div class="gift locked" id="gift">🔒 Комикс откроется, когда поделишься результатом</div>
+      <div class="gift locked" id="gift" hidden>🔒 Комикс откроется, когда поделишься результатом</div>
       <a class="link wide" id="lnkComic" target="_blank" rel="noopener" hidden>🎁 Твой подарок: читать комикс</a>
-      <button class="notify" id="notifyBtn">🔔 Получать подарки и новости от Аси и Жени</button>
+      <button class="notify" id="notifyBtn" hidden>🔔 Получать подарки и новости от Аси и Жени</button>
       <div class="subs">
         <span>Подписаться на певиц в VK:</span>
         <a id="lnkAsya" target="_blank" rel="noopener">АСЯ NOVA →</a>
@@ -202,10 +206,10 @@ h1{font-family:var(--display);font-weight:400;color:var(--red);font-size:clamp(2
   <section class="screen" id="challenge" hidden>
     <div class="eyebrow">Вызов другу</div>
     <div class="invite" id="invitePreview"></div>
-    <label class="namefld" for="myName">Как тебя подписать в вызове?
+    <label class="namefld" id="nameFld" for="myName">Как тебя подписать в вызове?
       <input id="myName" maxlength="24" placeholder="Твоё имя" autocomplete="given-name">
     </label>
-    <p class="hint">Нажми «Отправить» и выбери друга — во ВКонтакте, MAX или любом мессенджере.</p>
+    <p class="hint" id="chHint">Нажми «Отправить» и выбери друга — во ВКонтакте, MAX или любом мессенджере.</p>
     <div class="row">
       <button class="btn" id="sendChallenge">Отправить другу</button>
       <button class="btn ghost" id="closeChallenge">Назад</button>
@@ -697,6 +701,7 @@ function makeRankCard(mode,lvl){
   g.font='500 30px '+F;g.fillText('«Девица-красавица» · АСЯ NOVA и Женя Русева · 30 октября',540,1318);
   return c.toDataURL('image/jpeg',.92);
 }
+function challengePage(){ return GAME_URL+'r/ch_'+(HERO[hero].mode==='girls'?'devitsy_':'zlatobryuh_')+(rankLevel(S.score)+1)+'.html'; }
 function sharePage(){ return GAME_URL+'r/'+(HERO[hero].mode==='girls'?'devitsy_':'zlatobryuh_')+(rankLevel(S.score)+1)+'.html'; }
 function rankLevel(sc){const r=md().ranks;let l=0;r.forEach(([m],i)=>{if(sc>=m)l=i;});return l;}
 function endGame(){
@@ -749,12 +754,12 @@ function drawStory(g,t,score,title,badge){
   if(im.complete)g.drawImage(im,Wd/2-w/2,(z?470:445)+bob,w,h);
   if(score===null){ // ролик-звание для историй VK (без очков)
     const a=Math.min(1,t/1.2); g.globalAlpha=a; const tt='«'+title.replace(/[«»]/g,'')+'»';
-    g.font='800 30px Rubik, Inter, sans-serif';g.fillStyle=C.gold;g.fillText('МОЁ ЗВАНИЕ НА ЯРМАРКЕ',Wd/2,1010);
+    g.font='800 30px Rubik, Inter, sans-serif';g.fillStyle=C.gold;g.fillText('МОЁ ЗВАНИЕ НА ЯРМАРКЕ',Wd/2,962);
     let fs=tt.length>22?44:tt.length>16?54:64; g.font=`700 ${fs}px "Ruslan Display", Lora, Georgia, serif`;
     while(g.measureText(tt).width>Wd-60&&fs>30){fs-=2;g.font=`700 ${fs}px "Ruslan Display", Lora, Georgia, serif`;}
-    g.fillStyle=C.red;g.lineWidth=8;g.strokeStyle=C.cream;g.strokeText(tt,Wd/2,1090);g.fillText(tt,Wd/2,1090);
+    g.fillStyle=C.red;g.lineWidth=8;g.strokeStyle=C.cream;g.strokeText(tt,Wd/2,1030);g.fillText(tt,Wd/2,1030);
     const lv=badge|0; g.font='900 40px Rubik, Inter, sans-serif';
-    for(let i=0;i<6;i++){g.fillStyle=i<=lv?'#E8B83A':'rgba(201,154,58,.25)';g.fillText('★',Wd/2+(i-2.5)*50,1150);}
+    for(let i=0;i<6;i++){g.fillStyle=i<=lv?'#E8B83A':'rgba(201,154,58,.25)';g.fillText('★',Wd/2+(i-2.5)*50,1078);}
     g.globalAlpha=1; badge=null;
   } else {
   const k=Math.min(1,t/2.2), shown=Math.round(score*(1-Math.pow(1-k,3)));
@@ -763,6 +768,11 @@ function drawStory(g,t,score,title,badge){
   }
   if(score!==null&&t>2.4){const a=Math.min(1,(t-2.4)*2);g.globalAlpha=a;const tt=title.startsWith('«')?title:'«'+title+'»';
     g.font=`400 ${tt.length>24?34:44}px "Ruslan Display", Georgia, serif`;g.fillStyle=C.red;g.fillText(tt,Wd/2,1140);g.globalAlpha=1;}
+  if(score===null){ // место под кликабельную кнопку «Играть» (стикер VK) + мигающий призыв
+    const p=.5+.5*Math.sin(t*6), dy=Math.sin(t*5)*6;
+    g.globalAlpha=.7+.3*p;g.font='900 32px Rubik, Inter, sans-serif';g.fillStyle=C.red;g.fillText('▼ СМОЖЕШЬ БОЛЬШЕ? ЖМИ «ИГРАТЬ» ▼',Wd/2,1124+dy*.4);g.globalAlpha=1;
+    return;
+  }
   g.fillStyle=C.red;g.fillRect(0,1185,Wd,95);
   g.font='900 32px Rubik, sans-serif';g.fillStyle='#fff';g.fillText('А ты сможешь больше?',Wd/2,1228);
   g.font='500 21px Rubik, sans-serif';g.fillText('♪ «Девица-красавица» · АСЯ NOVA и Женя Русева · 30 октября',Wd/2,1262);
@@ -817,7 +827,7 @@ function openPost(kind){
   const photoId=RANK_PHOTOS[HERO[hero].mode][lvl]; // в VK-версии прикрепляется это фото из альбома
   fetch(url).then(r=>r.blob()).then(b=>postBlob=b).catch(()=>{});
   document.getElementById('postTitle').textContent=kind==='wall'?'Пост на стене ВКонтакте':'Сообщение в MAX';
-  document.getElementById('postSend').textContent=kind==='wall'?'Опубликовать на стене':'Отправить в MAX';
+  document.getElementById('postSend').textContent=kind==='wall'?'Поделиться в VK':'Отправить в MAX';
   document.getElementById('postText').value=postTextFor(kind);
   document.getElementById('postStatus').textContent='';
   document.getElementById('post').hidden=false;
@@ -847,8 +857,10 @@ document.getElementById('postSend').onclick=async()=>{
   if(postBlob) dl(postBlob,'vesyolaya-yarmarka.jpg');
 };
 function dl(blob,name){ try{ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);}catch(e){} }
-function unlockGift(){ document.getElementById('gift').hidden=true; document.getElementById('lnkComic').hidden=false; store.set('dk_gift','1'); }
-if(store.get('dk_gift')==='1'){ document.getElementById('gift').hidden=true; document.getElementById('lnkComic').hidden=false; }
+function showGift(){ document.getElementById('giftBtn').hidden=false; document.getElementById('ctaTxt').innerHTML='Спасибо, что поделился! Твой <b>подарок — комикс</b> 🎁'; }
+function unlockGift(){ store.set('dk_gift','1'); showGift(); }
+if(store.get('dk_gift')==='1') showGift();
+document.getElementById('giftBtn').onclick=()=>{ window.open(LINKS.comic,'_blank','noopener'); };
 sSend.onclick=async()=>{
   /* VK Mini App:
      vkBridge.send('VKWebAppShowStoryBox', {
@@ -924,23 +936,38 @@ if(IN_VK){
   APP_URL='https://vk.com/app'+VKQ.get('vk_app_id');
   VKB.send('VKWebAppInit').catch(()=>{});
   const copy=t=>VKB.send('VKWebAppCopyText',{text:t}).catch(()=>navigator.clipboard&&navigator.clipboard.writeText(t)).catch(()=>{});
+  // Кликабельный стикер «Играть» поверх истории
+  function playSticker(){
+    const c=document.createElement('canvas');c.width=960;c.height=230;const g=c.getContext('2d');
+    g.fillStyle='rgba(60,10,5,.35)';g.beginPath();g.roundRect(14,22,932,200,100);g.fill();
+    const gr=g.createLinearGradient(0,0,0,200);gr.addColorStop(0,'#E1251B');gr.addColorStop(1,'#B3120F');
+    g.fillStyle=gr;g.beginPath();g.roundRect(8,8,944,196,98);g.fill();
+    g.lineWidth=8;g.strokeStyle='#E8B83A';g.stroke();
+    g.textAlign='center';g.fillStyle='#fff';g.font='900 64px Rubik, Inter, sans-serif';g.fillText('▶ ИГРАТЬ',480,100);
+    g.font='700 36px Rubik, Inter, sans-serif';g.fillStyle='#FDE9B0';g.fillText('в «Весёлую Ярмарку» — нажми сюда',480,158);
+    return {sticker_type:'renderable',sticker:{content_type:'image',blob:c.toDataURL('image/png'),original_width:960,original_height:230,can_delete:false,
+      transform:{relation_width:.72,gravity:'center_bottom',translation_y:-.015},
+      clickable_zones:[{action_type:'link',action:{link:APP_URL,tooltip_text_key:'tooltip_open_default'},
+        clickable_area:[{x:0,y:0},{x:960,y:0},{x:960,y:230},{x:0,y:230}]}]}};
+  }
   // История: картинка 9:16 с результатом + кнопка-ссылка на игру
   document.getElementById('optStory').onclick=async()=>{
     sheet.hidden=true;
     const vid=GAME_URL+'v/'+hero+'_'+(rankLevel(S.score)+1)+'.mp4';
     try{ await VKB.send('VKWebAppShowStoryBox',{background_type:'video',url:vid,
-          attachment:{text:'go_to',type:'url',url:APP_URL}}); unlockGift(); }
+          attachment:{text:'go_to',type:'url',url:APP_URL}, stickers:[playSticker()]}); unlockGift(); }
     catch(e){ // запасной вариант — картинка
       const c=document.createElement('canvas'); c.width=720; c.height=1280; drawStory(c.getContext('2d'),6,S.score,rankFor(S.score),S.badge);
       try{ await VKB.send('VKWebAppShowStoryBox',{background_type:'image',blob:c.toDataURL('image/jpeg',.9),
-          attachment:{text:'go_to',type:'url',url:APP_URL}}); unlockGift(); }catch(e2){} }
+          attachment:{text:'go_to',type:'url',url:APP_URL}, stickers:[playSticker()]}); unlockGift(); }catch(e2){} }
   };
   // Стена и MAX
   document.getElementById('postSend').onclick=async()=>{
     const text=document.getElementById('postText').value, st=document.getElementById('postStatus');
     if(postKind==='wall'){
-      const ph=RANK_PHOTOS[HERO[hero].mode][rankLevel(S.score)];
-      try{ await VKB.send('VKWebAppShowWallPostBox',{message:text,attachments:ph||sharePage()}); unlockGift(); st.textContent='Опубликовано! Подарок открыт — комикс ждёт на экране результата.'; }
+      // окно «Поделиться» VK: «На стене», «В истории», «Сообщением» — с карточкой результата
+      await copy(text);
+      try{ await VKB.send('VKWebAppShare',{link:sharePage()}); unlockGift(); st.textContent='Готово! Подарок открыт — комикс ждёт на экране результата.'; }
       catch(e){ st.textContent='Публикация отменена.'; }
       return;
     }
@@ -950,10 +977,14 @@ if(IN_VK){
     await copy(text);
     st.textContent='Текст скопирован — открой MAX и вставь его в чат. Картинку сохрани долгим нажатием. Подарок уже открыт!';
   };
-  // Вызов другу — окно «Поделиться» VK
+  // Вызов другу: имя берём из профиля VK, в сообщении — карточка-вызов с текстом
+  document.getElementById('nameFld').hidden=true;
+  document.getElementById('chHint').textContent='Друг получит карточку с вызовом и твоим результатом — и сразу сможет сыграть.';
+  VKB.send('VKWebAppGetUserInfo').then(u=>{ if(u&&u.first_name){ myName.value=u.first_name; store.set('dk_name',u.first_name); refreshInvite(); } }).catch(()=>{});
   document.getElementById('sendChallenge').onclick=async()=>{
     const name=myName.value.trim()||'Твой друг', st=document.getElementById('challengeStatus');
-    const link=sharePage()+'#ch-'+b64u(JSON.stringify({n:name,s:S.score,h:hero}));
+    const link=challengePage()+'#ch-'+b64u(JSON.stringify({n:name,s:S.score,h:hero}));
+    copy(`⚔ ${name} бросает тебе вызов в «Весёлой Ярмарке»: ${S.score} очков! Сможешь больше?`);
     try{ await VKB.send('VKWebAppShare',{link}); st.textContent='Вызов отправлен!'; }catch(e){ st.textContent='Отправка отменена.'; }
   };
   // Разрешение на сообщения от пабликов
@@ -961,7 +992,7 @@ if(IN_VK){
     let ok=false; for(const g of VK_GROUPS){ try{ await VKB.send('VKWebAppAllowMessagesFromGroup',{group_id:g}); ok=true; }catch(e){} }
     if(ok){ setNotify(true); store.set('dk_notify','1'); } };
 }
-if(!IN_VK) nb.hidden=true;
+nb.hidden=true;
 document.getElementById('play').onclick=start;
 document.getElementById('restart').onclick=()=>{beep(440,.08);start();};
 document.getElementById('again').onclick=start;
