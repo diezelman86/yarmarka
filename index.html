@@ -235,6 +235,8 @@ h1{font-family:var(--display);font-weight:400;color:var(--red);font-size:clamp(2
     </div>
   </section>
 </div>
+<script>window.__maxReady=function(){window.__maxLoaded=1;if(window.maxInit)maxInit();};</script>
+<script src="https://st.max.ru/js/max-web-app.js" async onload="__maxReady()"></script>
 
 <script>
 /* ---------- ссылки ---------- */
@@ -993,6 +995,37 @@ if(IN_VK){
     if(ok){ setNotify(true); store.set('dk_notify','1'); } };
 }
 nb.hidden=true;
+
+/* ---------- MAX mini app (работает только внутри MAX; в VK и в браузере не включается) ---------- */
+const MAX_BOT='https://max.ru/se13585771_bot';
+let IN_MAX=false;
+function maxStart(n,sc,hr){ return 'c'+(sc|0)+'_'+(['asya','zhenya','zlato'].indexOf(hr))+'_'+b64u(String(n).slice(0,12)); }
+function maxParse(p){ const m=/^c(\d+)_(\d)_([A-Za-z0-9_-]+)$/.exec(p||''); if(!m) return null; const hr=['asya','zhenya','zlato'][+m[2]]||'asya'; let n='Друг'; try{n=unb64u(m[3]).slice(0,24);}catch(e){} return {n,s:+m[1],h:hr}; }
+function maxInit(){
+  const W=window.WebApp; if(IN_MAX||IN_VK||!W||!W.initData) return; IN_MAX=true; APP_URL=MAX_BOT;
+  const D=W.initDataUnsafe||{}, u=D.user;
+  if(u&&u.first_name){ myName.value=u.first_name; store.set('dk_name',u.first_name); }
+  document.getElementById('nameFld').hidden=true;
+  document.getElementById('chHint').textContent='Друг получит вызов с твоим результатом и сразу сможет сыграть.';
+  const ch=maxParse(D.start_param);
+  if(ch&&!CH){ CH=ch; if(!document.getElementById('start').hidden){ document.getElementById('incomingCard').innerHTML=inviteHTML(CH.n,CH.s,CH.h); document.getElementById('start').hidden=true; document.getElementById('incoming').hidden=false; } }
+  const share=(text,link)=>{ try{ const r=W.shareMaxContent({text,link}); return Promise.resolve(r).then(()=>true,()=>false); }catch(e){ return Promise.resolve(false); } };
+  // «Поделиться» — сразу окно отправки MAX (истории и стены в MAX нет)
+  document.getElementById('shareBtn').onclick=async()=>{
+    const rk=rankFor(S.score).replace(/[«»]/g,'');
+    const text=`🎪 Мой результат в «Весёлой Ярмарке» — ${S.score} очков и звание «${rk}»! Сможешь больше? Играй 👇\n🎵 «Девица-красавица» — АСЯ NOVA и Женя Русева, 30 октября`;
+    if(await share(text,MAX_BOT)) unlockGift();
+  };
+  document.getElementById('sendChallenge').onclick=async()=>{
+    const name=myName.value.trim()||'Твой друг', st=document.getElementById('challengeStatus');
+    const link=MAX_BOT+'?startapp='+maxStart(name,S.score,hero);
+    const text=`⚔ ${name} бросает тебе вызов в «Весёлой Ярмарке»: ${S.score} очков (${rankFor(S.score).replace(/[«»]/g,'')})! Сможешь больше? Жми и играй 👇`;
+    st.textContent=(await share(text,link))?'Вызов отправлен!':'Отправка отменена.';
+  };
+  document.getElementById('giftBtn').onclick=()=>{ try{ W.openLink(LINKS.comic); }catch(e){ window.open(LINKS.comic,'_blank','noopener'); } };
+  for(const id of ['lnkAsya','lnkZhenya']){ const a=document.getElementById(id); a.onclick=e=>{ e.preventDefault(); try{W.openLink(a.href);}catch(_){window.open(a.href,'_blank');} }; }
+}
+if(window.__maxLoaded||window.WebApp) maxInit();
 document.getElementById('play').onclick=start;
 document.getElementById('restart').onclick=()=>{beep(440,.08);start();};
 document.getElementById('again').onclick=start;
