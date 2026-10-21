@@ -706,7 +706,7 @@ function makeRankCard(mode,lvl){
 function challengePage(){ return GAME_URL+'r/ch_'+(HERO[hero].mode==='girls'?'devitsy_':'zlatobryuh_')+(rankLevel(S.score)+1)+'.html'; }
 function sharePage(){ return GAME_URL+'r/'+(HERO[hero].mode==='girls'?'devitsy_':'zlatobryuh_')+(rankLevel(S.score)+1)+'.html'; }
 function rankLevel(sc){const r=md().ranks;let l=0;r.forEach(([m],i)=>{if(sc>=m)l=i;});return l;}
-function endGame(){
+function endGame(){ setTimeout(()=>track('end',{score:S.score}),0);
   S.running=false; document.getElementById('restart').hidden=true;
   S.badge=badgeFor();
   const key='dk_best_'+HERO[hero].mode, best=Math.max(S.score,+store.get(key)||0);store.set(key,best);
@@ -726,7 +726,7 @@ function endGame(){
   /* VK-версия: отправить результат в таблицу
      fetch(RESULTS_URL,{method:'POST',body:JSON.stringify({vk_id, name, hero, score:S.score, rank:rankFor(S.score), badge:S.badge, challenge_from:CH&&CH.n})}) */
 }
-function start(){
+function start(){ track('start');
   try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume&&AC.resume();}catch(e){}
   stopSong(); newGame(); document.getElementById('start').hidden=true; document.getElementById('end').hidden=true; document.getElementById('restart').hidden=false;
 }
@@ -815,7 +815,7 @@ const sheet=document.getElementById('shareSheet');
 document.getElementById('shareBtn').onclick=()=>{sheet.hidden=false;};
 document.getElementById('sheetClose').onclick=()=>{sheet.hidden=true;};
 sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.hidden=true;});
-document.getElementById('optStory').onclick=()=>{sheet.hidden=true;makeStory();};
+document.getElementById('optStory').onclick=()=>{SHARE_KIND='story';sheet.hidden=true;makeStory();};
 let postKind='wall', postBlob=null;
 function postTextFor(kind){
   const rk=rankFor(S.score).replace(/[«»]/g,'');
@@ -834,8 +834,8 @@ function openPost(kind){
   document.getElementById('postStatus').textContent='';
   document.getElementById('post').hidden=false;
 }
-document.getElementById('optWall').onclick=()=>openPost('wall');
-document.getElementById('optMax').onclick=()=>openPost('max');
+document.getElementById('optWall').onclick=()=>{SHARE_KIND='wall';openPost('wall');};
+document.getElementById('optMax').onclick=()=>{SHARE_KIND='max';openPost('max');};
 document.getElementById('postClose').onclick=()=>{document.getElementById('post').hidden=true;};
 document.getElementById('postSend').onclick=async()=>{
   /* VK Mini App, «С друзьями»:
@@ -860,9 +860,22 @@ document.getElementById('postSend').onclick=async()=>{
 };
 function dl(blob,name){ try{ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);}catch(e){} }
 function showGift(){ document.getElementById('giftBtn').hidden=false; document.getElementById('ctaTxt').innerHTML='Спасибо, что поделился! Твой <b>подарок — комикс</b> 🎁'; }
-function unlockGift(){ store.set('dk_gift','1'); showGift(); }
+
+/* ---------- статистика: запуски, игры, репосты → Google-таблица ---------- */
+const STATS_URL='https://script.google.com/macros/s/AKfycbwu0uF3Ml-qFtHNsmVMH3VjA18-dtK9CanDLNVrc36eWub1fu4oYqajpeQS2svyc_Ln/exec'; // вставить адрес веб-приложения Apps Script (…/exec)
+let SHARE_KIND='', STATS_UID='';
+try{ STATS_UID=localStorage.getItem('dk_uid')||''; if(!STATS_UID){ STATS_UID=Math.random().toString(36).slice(2,10); localStorage.setItem('dk_uid',STATS_UID); } }catch(e){}
+function platform(){ return (typeof IN_VK!=='undefined'&&IN_VK)?'vk':(typeof IN_MAX!=='undefined'&&IN_MAX)?'max':'web'; }
+function track(ev,extra){
+  if(!STATS_URL) return;
+  const q=new URLSearchParams(location.search);
+  const d=Object.assign({ev,pf:platform(),uid:STATS_UID,hero:(typeof hero!=='undefined'?hero:''),
+    src:q.get('src')||q.get('vk_ref')||q.get('utm_source')||''},extra||{});
+  try{ fetch(STATS_URL,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain'},body:JSON.stringify(d)}); }catch(e){}
+}
+function unlockGift(){ store.set('dk_gift','1'); showGift(); track('share',{kind:SHARE_KIND||'?'}); }
 if(store.get('dk_gift')==='1') showGift();
-document.getElementById('giftBtn').onclick=()=>{ window.open(LINKS.comic,'_blank','noopener'); };
+document.getElementById('giftBtn').onclick=()=>{ track('gift'); window.open(LINKS.comic,'_blank','noopener'); };
 sSend.onclick=async()=>{
   /* VK Mini App:
      vkBridge.send('VKWebAppShowStoryBox', {
@@ -898,7 +911,7 @@ function refreshInvite(){ document.getElementById('invitePreview').innerHTML=inv
 myName.addEventListener('input',()=>{store.set('dk_name',myName.value.trim());refreshInvite();});
 document.getElementById('challengeBtn').onclick=()=>{ refreshInvite(); document.getElementById('challengeStatus').textContent=''; document.getElementById('challengeText').hidden=true; document.getElementById('challenge').hidden=false; };
 document.getElementById('closeChallenge').onclick=()=>{ document.getElementById('challenge').hidden=true; };
-document.getElementById('sendChallenge').onclick=async()=>{
+document.getElementById('sendChallenge').onclick=async()=>{ track('challenge');
   const name=myName.value.trim()||'Твой друг';
   const link=APP_URL+'#ch-'+b64u(JSON.stringify({n:name,s:S.score,h:hero}));
   const text=`⚔ ${name} бросает тебе вызов в игре «Весёлая Ярмарка»! Мой результат — ${S.score} очков (${rankFor(S.score).replace(/[«»]/g,'')}). Сможешь больше? Играй: ${link}`;
@@ -954,7 +967,7 @@ if(IN_VK){
   }
   // История: картинка 9:16 с результатом + кнопка-ссылка на игру
   document.getElementById('optStory').onclick=async()=>{
-    sheet.hidden=true;
+    SHARE_KIND='story'; sheet.hidden=true;
     const vid=GAME_URL+'v/'+hero+'_'+(rankLevel(S.score)+1)+'.mp4';
     try{ await VKB.send('VKWebAppShowStoryBox',{background_type:'video',url:vid,
           attachment:{text:'go_to',type:'url',url:APP_URL}, stickers:[playSticker()]}); unlockGift(); }
@@ -983,7 +996,7 @@ if(IN_VK){
   document.getElementById('nameFld').hidden=true;
   document.getElementById('chHint').textContent='Друг получит карточку с вызовом и твоим результатом — и сразу сможет сыграть.';
   VKB.send('VKWebAppGetUserInfo').then(u=>{ if(u&&u.first_name){ myName.value=u.first_name; store.set('dk_name',u.first_name); refreshInvite(); } }).catch(()=>{});
-  document.getElementById('sendChallenge').onclick=async()=>{
+  document.getElementById('sendChallenge').onclick=async()=>{ track('challenge');
     const name=myName.value.trim()||'Твой друг', st=document.getElementById('challengeStatus');
     const link=challengePage()+'#ch-'+b64u(JSON.stringify({n:name,s:S.score,h:hero}));
     copy(`⚔ ${name} бросает тебе вызов в «Весёлой Ярмарке»: ${S.score} очков! Сможешь больше?`);
@@ -1015,15 +1028,15 @@ function maxInit(){
   document.getElementById('shareBtn').onclick=async()=>{
     const rk=rankFor(S.score).replace(/[«»]/g,'');
     const text=`🎪 Мой результат в «Весёлой Ярмарке» — ${S.score} очков и звание «${rk}»! Сможешь больше? Играй 👇\n🎵 «Девица-красавица» — АСЯ NOVA и Женя Русева, 30 октября`;
-    if(await share(text,MAX_BOT)) unlockGift();
+    SHARE_KIND='max_app'; if(await share(text,MAX_BOT)) unlockGift();
   };
-  document.getElementById('sendChallenge').onclick=async()=>{
+  document.getElementById('sendChallenge').onclick=async()=>{ track('challenge');
     const name=myName.value.trim()||'Твой друг', st=document.getElementById('challengeStatus');
     const link=MAX_BOT+'?startapp='+maxStart(name,S.score,hero);
     const text=`⚔ ${name} бросает тебе вызов в «Весёлой Ярмарке»: ${S.score} очков (${rankFor(S.score).replace(/[«»]/g,'')})! Сможешь больше? Жми и играй 👇`;
     st.textContent=(await share(text,link))?'Вызов отправлен!':'Отправка отменена.';
   };
-  document.getElementById('giftBtn').onclick=()=>{ try{ W.openLink(LINKS.comic); }catch(e){ window.open(LINKS.comic,'_blank','noopener'); } };
+  document.getElementById('giftBtn').onclick=()=>{ track('gift'); try{ W.openLink(LINKS.comic); }catch(e){ window.open(LINKS.comic,'_blank','noopener'); } };
   // подписка — на канал АСЯ NOVA в MAX (открывается внутри MAX)
   const subs=document.querySelector('.subs'); if(subs&&subs.firstElementChild) subs.firstElementChild.textContent='Подписаться в MAX:';
   const la=document.getElementById('lnkAsya'); la.href=MAX_CHANNEL; la.textContent='Канал АСЯ NOVA →';
@@ -1031,6 +1044,7 @@ function maxInit(){
   document.getElementById('lnkZhenya').hidden=true;
 }
 if(window.__maxLoaded||window.WebApp) maxInit();
+setTimeout(()=>track('open',CH?{ch:1}:{}),1500); // после определения платформы
 document.getElementById('play').onclick=start;
 document.getElementById('restart').onclick=()=>{beep(440,.08);start();};
 document.getElementById('again').onclick=start;
